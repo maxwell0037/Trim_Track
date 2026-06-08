@@ -13,9 +13,14 @@ import { ArchivePage } from "./pages/ArchivePage";
 import { LiveSessionPage } from "./pages/LiveSessionPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StartSessionPage } from "./pages/StartSessionPage";
+import { TrimTrackPage } from "./pages/TrimTrackPage";
 
 const EndSessionPage = lazy(() =>
   import("./pages/EndSessionPage").then((m) => ({ default: m.EndSessionPage })),
+);
+
+const FacilitiesTestPage = lazy(() =>
+  import("./pages/FacilitiesTestPage").then((m) => ({ default: m.FacilitiesTestPage })),
 );
 
 function PageLoader() {
@@ -38,7 +43,9 @@ export default function App() {
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<StartSessionPage />} />
+                    <Route path="/trim-track/:sessionId" element={<TrimTrackPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/supabase/facilities" element={<FacilitiesTestPage />} />
                     <Route path="/archive" element={<ArchivePage />} />
                     <Route path="/archive/:id" element={<ArchiveDetailPage />} />
                     <Route path="/archive/:id/edit" element={<ArchiveEditPage />} />

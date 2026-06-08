@@ -49,3 +49,81 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Ant Design session UI — selection & dashboard polish */
+.tt-select-card {
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  touch-action: manipulation;
+}
+
+.tt-select-card:hover {
+  border-color: #3d5068 !important;
+}
+
+.tt-select-card:active {
+  transform: scale(0.98);
+}
+
+.tt-select-card--active {
+  border-color: #22c55e !important;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.14) 0%, rgba(34, 197, 94, 0.06) 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.35),
+    0 4px 20px rgba(34, 197, 94, 0.12);
+}
+
+.tt-employee-card--active {
+  border-color: #22c55e !important;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.08) 100%) !important;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+}
+
+.tt-weight-input .ant-input {
+  font-size: 2.5rem !important;
+  font-weight: 700 !important;
+  text-align: center;
+  letter-spacing: -0.02em;
+  min-height: 72px;
+}
+
+.tt-category-btn--flash {
+  transform: scale(0.97);
+  filter: brightness(1.15);
+}
+
+.tt-dashboard-panel .ant-card-head {
+  min-height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(46, 61, 82, 0.6);
+}
+
+.tt-dashboard-panel .ant-card-head-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 10px 0;
+}
+
+.tt-dashboard-panel .ant-card-body {
+  padding: 12px;
+}
+
+.tt-summary-stat .ant-statistic-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4) !important;
+  margin-bottom: 4px !important;
+}
+
+.tt-summary-stat .ant-statistic-content {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,21 @@
+import {
+  DownloadOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Divider,
+  Row,
+  Statistic,
+  Typography,
+} from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/Button";
 import { EmployeeIdentity } from "../components/EmployeeIdentity";
 import { Layout } from "../components/Layout";
 import { SessionInfoHeader } from "../components/SessionInfoHeader";
@@ -10,14 +25,21 @@ import { useMasterData } from "../context/MasterDataContext";
 import { getEmployeeTotals, getGrandTotal, getSessionTotals } from "../types";
 import { sortEmployeesByNumber } from "../utils/employees";
 import { exportRawDataCSV } from "../utils/export";
-import { GrandTotalCard, ProductionStat, SummaryLine } from "../components/WeightSummary";
-import { formatDate, formatDuration, formatWeightWithLbs } from "../utils/format";
+import { formatDate, formatDuration, formatLbs, formatWeight, formatWeightWithLbs } from "../utils/format";
 import { getSessionEmployees } from "../utils/sessionEmployees";
 import {
   HOURLY_TRACK_PATH,
   START_SESSION_PATH,
   TRIM_TRACK_LIVE_PATH,
 } from "../lib/sessionRoutes";
+
+const { Title, Text } = Typography;
+
+const CATEGORY_COLORS = {
+  regular: "#22c55e",
+  stick: "#f59e0b",
+  smalls: "#8b5cf6",
+};
 
 export function EndSessionPage() {
   useArchiveRefreshOnMount();
@@ -110,84 +132,268 @@ export function EndSessionPage() {
       backLabel="Resume"
       headerCenter={<SessionInfoHeader session={session} compact />}
     >
-      <div className="flex flex-1 flex-col overflow-y-auto p-6">
+      <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6">
         <div className="mx-auto w-full max-w-5xl">
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <InfoCard label="Session Date" value={formatDate(session.startedAt)} />
-            <InfoCard
-              label="Session Duration"
-              value={formatDuration(session.startedAt, sessionEndedAt)}
-            />
-            <InfoCard label="Total Entries" value={String(session.entries.length)} />
-            <GrandTotalCard grams={sessionGrandTotal} />
-          </div>
+          <Alert
+            type="success"
+            showIcon
+            message="Production session completed"
+            description="Review totals below and export reports for payroll handoff."
+            style={{
+              marginBottom: 24,
+              borderRadius: 14,
+              background: "linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.03) 100%)",
+              border: "1px solid rgba(34, 197, 94, 0.3)",
+            }}
+          />
 
-          <div className="mb-6 grid grid-cols-3 gap-3">
-            <ProductionStat
-              label="Regular Trim"
-              value={sessionTotals.regular}
-              color="text-trim-regular"
-            />
-            <ProductionStat
-              label="Stick Trim"
-              value={sessionTotals.stick}
-              color="text-trim-stick"
-            />
-            <ProductionStat
-              label="Smalls"
-              value={sessionTotals.smalls}
-              color="text-trim-smalls"
-            />
-          </div>
+          <Title level={5} style={{ marginBottom: 12, color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
+            Session Overview
+          </Title>
+          <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 14, height: "100%" }}>
+                <Statistic
+                  title="Session Date"
+                  value={formatDate(session.startedAt)}
+                  valueStyle={{ fontSize: 16, fontWeight: 600 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 14, height: "100%" }}>
+                <Statistic
+                  title="Duration"
+                  value={formatDuration(session.startedAt, sessionEndedAt)}
+                  valueStyle={{ fontSize: 16, fontWeight: 600 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card size="small" style={{ borderRadius: 14, height: "100%" }}>
+                <Statistic
+                  title="Total Entries"
+                  value={session.entries.length}
+                  valueStyle={{ fontSize: 24, fontWeight: 700 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={6}>
+              <Card
+                size="small"
+                style={{
+                  borderRadius: 14,
+                  height: "100%",
+                  border: "1px solid rgba(34, 197, 94, 0.35)",
+                  background: "linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)",
+                }}
+              >
+                <Statistic
+                  title="Grand Total"
+                  value={formatWeight(sessionGrandTotal)}
+                  valueStyle={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}
+                  className="tt-summary-stat"
+                />
+                <Text type="secondary" style={{ fontSize: 13, fontWeight: 600 }}>
+                  {formatLbs(sessionGrandTotal)}
+                </Text>
+              </Card>
+            </Col>
+          </Row>
 
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+          <Title level={5} style={{ marginBottom: 12, color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
+            Category Breakdown
+          </Title>
+          <Row gutter={[12, 12]} style={{ marginBottom: 28 }}>
+            <Col xs={24} sm={8}>
+              <Card
+                size="small"
+                style={{ borderRadius: 14, borderTop: `3px solid ${CATEGORY_COLORS.regular}` }}
+              >
+                <Statistic
+                  title="Regular Trim"
+                  value={sessionTotals.regular}
+                  suffix="g"
+                  valueStyle={{ fontSize: 28, fontWeight: 700, color: CATEGORY_COLORS.regular }}
+                  className="tt-summary-stat"
+                />
+                <Text type="secondary" style={{ fontSize: 14, fontWeight: 600 }}>
+                  {formatLbs(sessionTotals.regular)}
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card
+                size="small"
+                style={{ borderRadius: 14, borderTop: `3px solid ${CATEGORY_COLORS.stick}` }}
+              >
+                <Statistic
+                  title="Stick Trim"
+                  value={sessionTotals.stick}
+                  suffix="g"
+                  valueStyle={{ fontSize: 28, fontWeight: 700, color: CATEGORY_COLORS.stick }}
+                  className="tt-summary-stat"
+                />
+                <Text type="secondary" style={{ fontSize: 14, fontWeight: 600 }}>
+                  {formatLbs(sessionTotals.stick)}
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card
+                size="small"
+                style={{ borderRadius: 14, borderTop: `3px solid ${CATEGORY_COLORS.smalls}` }}
+              >
+                <Statistic
+                  title="Smalls"
+                  value={sessionTotals.smalls}
+                  suffix="g"
+                  valueStyle={{ fontSize: 28, fontWeight: 700, color: CATEGORY_COLORS.smalls }}
+                  className="tt-summary-stat"
+                />
+                <Text type="secondary" style={{ fontSize: 14, fontWeight: 600 }}>
+                  {formatLbs(sessionTotals.smalls)}
+                </Text>
+              </Card>
+            </Col>
+          </Row>
+
+          <Divider style={{ borderColor: "rgba(46, 61, 82, 0.5)", margin: "0 0 20px" }} />
+
+          <Title level={5} style={{ marginBottom: 12, color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
             Employee Summary
-          </h2>
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          </Title>
+          <Row gutter={[12, 12]} style={{ marginBottom: 28 }}>
             {sortedEmployees.map((employee) => {
               const totals = getEmployeeTotals(employee.id, session.entries);
               const total = getGrandTotal(totals);
               return (
-                <div
-                  key={employee.id}
-                  className="rounded-xl border border-surface-600 bg-surface-800 p-4"
-                >
-                  <EmployeeIdentity employee={employee} size="md" inlineName />
-                  <div className="mt-3 space-y-2 border-t border-surface-600/50 pt-3">
-                    <SummaryLine label="Regular" value={totals.regular} />
-                    <SummaryLine label="Stick" value={totals.stick} />
-                    <SummaryLine label="Smalls" value={totals.smalls} />
-                    <div className="flex items-baseline justify-between border-t border-surface-600/50 pt-2">
-                      <span className="text-sm font-bold text-white/60">Total</span>
-                      <span className="text-xl font-bold tabular-nums text-brand-400">
+                <Col key={employee.id} xs={24} sm={12}>
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, height: "100%" }}
+                    styles={{ body: { padding: 16 } }}
+                  >
+                    <EmployeeIdentity employee={employee} size="md" inlineName />
+                    <Divider style={{ margin: "12px 0", borderColor: "rgba(46, 61, 82, 0.4)" }} />
+                    <Row gutter={[8, 8]}>
+                      <Col span={8}>
+                        <Statistic
+                          title="Regular"
+                          value={totals.regular}
+                          suffix="g"
+                          valueStyle={{ fontSize: 14, color: CATEGORY_COLORS.regular }}
+                          className="tt-summary-stat"
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic
+                          title="Stick"
+                          value={totals.stick}
+                          suffix="g"
+                          valueStyle={{ fontSize: 14, color: CATEGORY_COLORS.stick }}
+                          className="tt-summary-stat"
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Statistic
+                          title="Smalls"
+                          value={totals.smalls}
+                          suffix="g"
+                          valueStyle={{ fontSize: 14, color: CATEGORY_COLORS.smalls }}
+                          className="tt-summary-stat"
+                        />
+                      </Col>
+                    </Row>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "baseline",
+                        marginTop: 12,
+                        paddingTop: 12,
+                        borderTop: "1px solid rgba(46, 61, 82, 0.4)",
+                      }}
+                    >
+                      <Text strong style={{ color: "rgba(255,255,255,0.6)" }}>
+                        Total
+                      </Text>
+                      <Text strong style={{ fontSize: 20, color: "#4ade80" }}>
                         {formatWeightWithLbs(total)}
-                      </span>
+                      </Text>
                     </div>
-                  </div>
-                </div>
+                  </Card>
+                </Col>
               );
             })}
-          </div>
+          </Row>
 
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
-            Export Options
-          </h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Button size="lg" variant="secondary" onClick={handleEmployeeReceipts}>
-              Employee Receipt PDF
-            </Button>
-            <Button size="lg" variant="secondary" onClick={handleSessionSummaryPdf}>
-              Session Summary PDF
-            </Button>
-            <Button size="lg" variant="secondary" onClick={handleRawDataCsv}>
-              Raw Data CSV
-            </Button>
-          </div>
-          {exportStatus && (
-            <p className="mb-4 text-center text-sm text-brand-400">{exportStatus}</p>
-          )}
+          <Divider style={{ borderColor: "rgba(46, 61, 82, 0.5)", margin: "0 0 20px" }} />
 
-          <Button size="lg" fullWidth onClick={handleNewSession}>
+          <Title level={5} style={{ marginBottom: 12, color: "rgba(255,255,255,0.4)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
+            Export Reports
+          </Title>
+          <Card
+            style={{ borderRadius: 14, marginBottom: 16 }}
+            styles={{ body: { padding: 20 } }}
+          >
+            <Row gutter={[12, 12]}>
+              <Col xs={24} sm={8}>
+                <Button
+                  block
+                  size="large"
+                  icon={<FilePdfOutlined />}
+                  onClick={handleEmployeeReceipts}
+                  style={{ height: 56, borderRadius: 12 }}
+                >
+                  Employee Receipt PDF
+                </Button>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Button
+                  block
+                  size="large"
+                  icon={<FilePdfOutlined />}
+                  onClick={handleSessionSummaryPdf}
+                  style={{ height: 56, borderRadius: 12 }}
+                >
+                  Session Summary PDF
+                </Button>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Button
+                  block
+                  size="large"
+                  icon={<FileExcelOutlined />}
+                  onClick={handleRawDataCsv}
+                  style={{ height: 56, borderRadius: 12 }}
+                >
+                  Raw Data CSV
+                </Button>
+              </Col>
+            </Row>
+            {exportStatus && (
+              <Alert
+                type="info"
+                showIcon
+                icon={<DownloadOutlined />}
+                message={exportStatus}
+                style={{ marginTop: 16, borderRadius: 10 }}
+              />
+            )}
+          </Card>
+
+          <Button
+            type="primary"
+            size="large"
+            block
+            icon={<PlayCircleOutlined />}
+            onClick={handleNewSession}
+            style={{ height: 56, fontSize: 17, fontWeight: 700, borderRadius: 14 }}
+          >
             Start New Session
           </Button>
         </div>
@@ -195,13 +401,3 @@ export function EndSessionPage() {
     </Layout>
   );
 }
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-surface-600 bg-surface-800 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">{label}</p>
-      <p className="mt-0.5 text-base font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-

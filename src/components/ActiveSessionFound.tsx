@@ -1,5 +1,6 @@
+import { PlayCircleOutlined, StopOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Row, Space, Statistic, Typography } from "antd";
 import type { Session } from "../types";
-import { Button } from "./Button";
 import { formatTime } from "../utils/format";
 
 interface ActiveSessionFoundProps {
@@ -9,15 +10,6 @@ interface ActiveSessionFoundProps {
   onDelete: () => void;
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{label}</p>
-      <p className="text-sm font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
 export function ActiveSessionFound({
   session,
   onResume,
@@ -25,30 +17,73 @@ export function ActiveSessionFound({
   onDelete,
 }: ActiveSessionFoundProps) {
   return (
-    <div className="rounded-xl border border-brand-500/50 bg-brand-600/10 p-5">
-      <h2 className="text-lg font-bold text-white">Active Session Found</h2>
-      <p className="mt-1 text-sm text-white/60">
-        {session.entries.length} entr{session.entries.length === 1 ? "y" : "ies"} recorded ·
-        started {formatTime(session.startedAt)}
-      </p>
+    <Alert
+      type="success"
+      showIcon
+      message={
+        <Typography.Text strong style={{ fontSize: 16, color: "rgba(255,255,255,0.92)" }}>
+          Active Session Found
+        </Typography.Text>
+      }
+      description={
+        <div style={{ marginTop: 8 }}>
+          <Typography.Text type="secondary">
+            {session.entries.length} entr{session.entries.length === 1 ? "y" : "ies"} recorded ·
+            started {formatTime(session.startedAt)}
+          </Typography.Text>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <DetailRow label="Facility" value={session.facilityName} />
-        <DetailRow label="Room" value={session.roomName ?? "—"} />
-        <DetailRow label="Supervisor" value={session.supervisorName} />
-      </div>
+          <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+            <Col xs={12} sm={8}>
+              <Card size="small" styles={{ body: { padding: "10px 12px" } }}>
+                <Statistic
+                  title="Facility"
+                  value={session.facilityName}
+                  valueStyle={{ fontSize: 14, fontWeight: 600 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={8}>
+              <Card size="small" styles={{ body: { padding: "10px 12px" } }}>
+                <Statistic
+                  title="Room"
+                  value={session.roomName ?? "—"}
+                  valueStyle={{ fontSize: 14, fontWeight: 600 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={8}>
+              <Card size="small" styles={{ body: { padding: "10px 12px" } }}>
+                <Statistic
+                  title="Supervisor"
+                  value={session.supervisorName}
+                  valueStyle={{ fontSize: 14, fontWeight: 600 }}
+                  className="tt-summary-stat"
+                />
+              </Card>
+            </Col>
+          </Row>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="md" onClick={onResume}>
-          Resume Session
-        </Button>
-        <Button size="md" variant="secondary" onClick={onEnd}>
-          End Session
-        </Button>
-        <Button size="md" variant="danger" onClick={onDelete}>
-          Delete Session
-        </Button>
-      </div>
-    </div>
+          <Space wrap style={{ marginTop: 16 }}>
+            <Button type="primary" size="large" icon={<PlayCircleOutlined />} onClick={onResume}>
+              Resume Session
+            </Button>
+            <Button size="large" icon={<StopOutlined />} onClick={onEnd}>
+              End Session
+            </Button>
+            <Button danger size="large" icon={<DeleteOutlined />} onClick={onDelete}>
+              Delete Session
+            </Button>
+          </Space>
+        </div>
+      }
+      style={{
+        background: "linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)",
+        border: "1px solid rgba(34, 197, 94, 0.35)",
+        borderRadius: 16,
+        padding: "16px 20px",
+      }}
+    />
   );
 }

@@ -1,12 +1,16 @@
+import {
+  CheckCircleFilled,
+  SearchOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import { Badge, Button, Card, Col, Empty, Input, Row, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ActiveSessionFound } from "../components/ActiveSessionFound";
 import { AppNav } from "../components/AppNav";
-import { Button } from "../components/Button";
 import { DeleteSessionModal } from "../components/DeleteSessionModal";
 import { EmployeeIdentity } from "../components/EmployeeIdentity";
 import { Layout } from "../components/Layout";
-import { SectionLabel, SelectTile } from "../components/SelectTile";
 import { useMasterData } from "../context/MasterDataContext";
 import { useSession } from "../context/SessionContext";
 import { filterEmployees } from "../utils/employees";
@@ -17,6 +21,8 @@ import {
   TRIM_TRACK_LIVE_PATH,
 } from "../lib/sessionRoutes";
 
+const { Text } = Typography;
+
 const WORK_TYPE_OPTIONS = [
   { value: "trim", label: "TRIM" },
   { value: "deleaf", label: "DELEAF" },
@@ -25,6 +31,73 @@ const WORK_TYPE_OPTIONS = [
   { value: "package", label: "PACKAGE" },
   { value: "sorting", label: "SORTING" },
 ];
+
+function SectionCard({
+  title,
+  extra,
+  children,
+}: {
+  title: string;
+  extra?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card
+      title={
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.5)",
+          }}
+        >
+          {title}
+        </Text>
+      }
+      extra={extra}
+      styles={{
+        header: { borderBottom: "1px solid rgba(46, 61, 82, 0.5)", minHeight: 48 },
+        body: { padding: 16 },
+      }}
+      style={{ borderRadius: 16 }}
+    >
+      {children}
+    </Card>
+  );
+}
+
+function SelectCard({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Card
+      hoverable
+      onClick={onClick}
+      className={`tt-select-card ${selected ? "tt-select-card--active" : ""}`}
+      styles={{ body: { padding: "14px 16px", minHeight: 52 } }}
+      style={{
+        borderRadius: 12,
+        border: "2px solid #2e3d52",
+        background: selected ? undefined : "#1a222d",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <Text strong style={{ fontSize: 15, color: selected ? "#fff" : "rgba(255,255,255,0.85)" }}>
+          {label}
+        </Text>
+        {selected && <CheckCircleFilled style={{ color: "#22c55e", fontSize: 18 }} />}
+      </div>
+    </Card>
+  );
+}
 
 export function StartSessionPage() {
   const navigate = useNavigate();
@@ -132,8 +205,8 @@ export function StartSessionPage() {
       headerRight={<AppNav />}
     >
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto overscroll-contain p-6 pb-4">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-6 pb-4">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
             {hasActiveSession && session && (
               <ActiveSessionFound
                 session={session}
@@ -151,119 +224,147 @@ export function StartSessionPage() {
               />
             )}
 
-            <section>
-              <SectionLabel>Facility</SectionLabel>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <SectionCard title="Facility">
+              <Row gutter={[10, 10]}>
                 {facilities.map((facility) => (
-                  <SelectTile
-                    key={facility.id}
-                    label={facility.name.toUpperCase()}
-                    selected={facilityId === facility.id}
-                    onClick={() => {
-                      setFacilityId(facility.id);
-                      setRoomId("");
-                    }}
-                  />
+                  <Col key={facility.id} xs={12} sm={8}>
+                    <SelectCard
+                      label={facility.name.toUpperCase()}
+                      selected={facilityId === facility.id}
+                      onClick={() => {
+                        setFacilityId(facility.id);
+                        setRoomId("");
+                      }}
+                    />
+                  </Col>
                 ))}
-              </div>
-            </section>
+              </Row>
+            </SectionCard>
 
             {facilityId && facilityHasRooms && (
-              <section>
-                <SectionLabel>Room</SectionLabel>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <SectionCard title="Room">
+                <Row gutter={[10, 10]}>
                   {facilityRooms.map((room) => (
-                    <SelectTile
-                      key={room.id}
-                      label={room.name}
-                      selected={roomId === room.id}
-                      onClick={() => setRoomId(room.id)}
-                    />
+                    <Col key={room.id} xs={24} sm={8}>
+                      <SelectCard
+                        label={room.name}
+                        selected={roomId === room.id}
+                        onClick={() => setRoomId(room.id)}
+                      />
+                    </Col>
                   ))}
-                </div>
-              </section>
+                </Row>
+              </SectionCard>
             )}
 
-            <section>
-              <SectionLabel>Supervisor</SectionLabel>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <SectionCard title="Supervisor">
+              <Row gutter={[10, 10]}>
                 {activeSupervisors.map((supervisor) => (
-                  <SelectTile
-                    key={supervisor.id}
-                    label={supervisor.name}
-                    selected={supervisorId === supervisor.id}
-                    onClick={() => setSupervisorId(supervisor.id)}
-                  />
+                  <Col key={supervisor.id} xs={24} sm={8}>
+                    <SelectCard
+                      label={supervisor.name}
+                      selected={supervisorId === supervisor.id}
+                      onClick={() => setSupervisorId(supervisor.id)}
+                    />
+                  </Col>
                 ))}
-              </div>
-            </section>
+              </Row>
+            </SectionCard>
 
-            <section>
-              <SectionLabel>Work Type</SectionLabel>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <SectionCard title="Work Type">
+              <Row gutter={[10, 10]}>
                 {WORK_TYPE_OPTIONS.map((option) => (
-                  <SelectTile
-                    key={option.value}
-                    label={option.label}
-                    selected={workType === option.value}
-                    onClick={() => setWorkType(option.value)}
-                  />
+                  <Col key={option.value} xs={12} sm={8}>
+                    <SelectCard
+                      label={option.label}
+                      selected={workType === option.value}
+                      onClick={() => setWorkType(option.value)}
+                    />
+                  </Col>
                 ))}
-              </div>
-            </section>
+              </Row>
+            </SectionCard>
 
-            <section>
-              <SectionLabel>
-                Employees
-                {selectedEmployeeIds.length > 0 && (
-                  <span className="ml-2 font-normal text-brand-400">
-                    ({selectedEmployeeIds.length} selected)
-                  </span>
-                )}
-              </SectionLabel>
-
-              <input
-                type="search"
-                enterKeyHint="search"
+            <SectionCard
+              title="Employees"
+              extra={
+                selectedEmployeeIds.length > 0 ? (
+                  <Badge
+                    count={selectedEmployeeIds.length}
+                    style={{ backgroundColor: "#22c55e" }}
+                    overflowCount={99}
+                  >
+                    <TeamOutlined style={{ fontSize: 18, color: "rgba(255,255,255,0.5)" }} />
+                  </Badge>
+                ) : undefined
+              }
+            >
+              <Input
+                size="large"
+                allowClear
+                prefix={<SearchOutlined style={{ color: "rgba(255,255,255,0.35)" }} />}
                 placeholder="Search by ID, name, or preferred name…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="mt-2 w-full rounded-xl border-2 border-surface-600 bg-surface-800 px-4 py-3 text-base text-white outline-none placeholder:text-white/30 focus:border-brand-500"
+                style={{ marginBottom: 12, borderRadius: 12 }}
               />
 
               {filteredEmployees.length === 0 ? (
-                <p className="mt-3 text-center text-sm text-white/40">
-                  No employees match your search
-                </p>
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="No employees match your search"
+                  style={{ margin: "12px 0" }}
+                />
               ) : (
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <Row gutter={[10, 10]}>
                   {filteredEmployees.map((employee) => {
                     const selected = selectedEmployeeIds.includes(employee.id);
                     return (
-                      <button
-                        key={employee.id}
-                        type="button"
-                        onClick={() => toggleEmployee(employee.id)}
-                        className={`rounded-xl border-2 p-3 text-left transition-all active:scale-[0.97] touch-manipulation
-                          ${
-                            selected
-                              ? "border-brand-500 bg-brand-600/15"
-                              : "border-surface-600 bg-surface-800 hover:border-surface-500"
-                          }`}
-                      >
-                        <EmployeeIdentity employee={employee} size="sm" />
-                      </button>
+                      <Col key={employee.id} xs={12} sm={8}>
+                        <Card
+                          hoverable
+                          onClick={() => toggleEmployee(employee.id)}
+                          className={`tt-select-card ${selected ? "tt-select-card--active" : ""}`}
+                          styles={{ body: { padding: 14 } }}
+                          style={{
+                            borderRadius: 12,
+                            border: "2px solid #2e3d52",
+                            background: selected ? undefined : "#1a222d",
+                            height: "100%",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <EmployeeIdentity employee={employee} size="sm" />
+                            {selected && (
+                              <CheckCircleFilled style={{ color: "#22c55e", fontSize: 16, flexShrink: 0 }} />
+                            )}
+                          </div>
+                        </Card>
+                      </Col>
                     );
                   })}
-                </div>
+                </Row>
               )}
-            </section>
+            </SectionCard>
           </div>
         </div>
 
-        <div className="relative z-10 shrink-0 border-t border-surface-600/50 bg-surface-900 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          className="relative z-10 shrink-0 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          style={{
+            borderTop: "1px solid rgba(46, 61, 82, 0.5)",
+            background: "linear-gradient(180deg, transparent 0%, #0f1419 20%)",
+          }}
+        >
           <div className="mx-auto w-full max-w-3xl">
-            <Button size="lg" fullWidth disabled={!canStart} onClick={handleStart}>
+            <Button
+              type="primary"
+              size="large"
+              block
+              disabled={!canStart}
+              onClick={handleStart}
+              style={{ height: 56, fontSize: 17, fontWeight: 700, borderRadius: 14 }}
+            >
               Start Session
             </Button>
           </div>

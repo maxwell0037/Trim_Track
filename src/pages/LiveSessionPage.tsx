@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Button, Card, Col, Empty, Input, Row, Space, Statistic, Typography } from "antd";
 import type { InputRef } from "antd/es/input";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EditEntryModal } from "../components/EditEntryModal";
 import { UndoLastEntryModal } from "../components/UndoLastEntryModal";
@@ -60,6 +60,7 @@ export function LiveSessionPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const inputRef = useRef<InputRef>(null);
+  const entryActionsRef = useRef<HTMLDivElement>(null);
 
   const sessionEmployees = useMemo(() => {
     if (!session) return [];
@@ -71,11 +72,44 @@ export function LiveSessionPage() {
     [session],
   );
 
-  const gridCols = sessionEmployees.length > 12 ? 3 : 2;
+  const scrollEntryIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      entryActionsRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }, []);
 
   useEffect(() => {
     reloadFromStorage();
   }, [reloadFromStorage]);
+
+  useEffect(() => {
+    const inputEl = inputRef.current?.input;
+    const entryEl = entryActionsRef.current;
+    const vv = window.visualViewport;
+    if (!inputEl || !entryEl || !vv) return;
+
+    const entryNode = entryEl;
+
+    function keepEntryVisible() {
+      const viewport = window.visualViewport;
+      if (!viewport || document.activeElement !== inputEl) return;
+      const rect = entryNode.getBoundingClientRect();
+      const visibleBottom = viewport.height + viewport.offsetTop;
+      if (rect.bottom > visibleBottom - 16) {
+        entryNode.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    }
+
+    inputEl.addEventListener("focus", scrollEntryIntoView);
+    vv.addEventListener("resize", keepEntryVisible);
+    vv.addEventListener("scroll", keepEntryVisible);
+
+    return () => {
+      inputEl.removeEventListener("focus", scrollEntryIntoView);
+      vv.removeEventListener("resize", keepEntryVisible);
+      vv.removeEventListener("scroll", keepEntryVisible);
+    };
+  }, [session, scrollEntryIntoView]);
 
   useEffect(() => {
     if (!session) {
@@ -245,9 +279,9 @@ export function LiveSessionPage() {
   );
 
   const weightEntrySection = (
-    <>
+    <div ref={entryActionsRef} className="tt-live-entry-actions">
       <div>
-      <p className="tt-section-label mb-1.5 text-center">Weight (grams)</p>
+        <p className="tt-section-label mb-1.5 text-center">Weight (grams)</p>
         <Input
           ref={inputRef}
           id="weight-input"
@@ -257,6 +291,7 @@ export function LiveSessionPage() {
           placeholder="0"
           value={weight}
           onChange={(e) => handleWeightChange(e.target.value)}
+          onFocus={scrollEntryIntoView}
           autoFocus
           style={{ borderRadius: 14 }}
         />
@@ -285,7 +320,7 @@ export function LiveSessionPage() {
           onClick={() => handleCategoryClick("smalls")}
         />
       </Space>
-    </>
+    </div>
   );
 
   const recentEntriesSection = (
@@ -378,22 +413,24 @@ export function LiveSessionPage() {
             style={{ height: "100%", borderRadius: 0, background: "transparent" }}
             styles={{ body: { display: "flex", flexDirection: "column", overflow: "hidden" } }}
           >
-            <Row gutter={[6, 6]} style={{ alignContent: "flex-start" }}>
-              {sessionEmployees.map((employee) => {
-                const totals = getEmployeeTotals(employee.id, activeSession.entries);
-                const isActive = employee.id === activeEmployeeId;
-                return (
-                  <Col key={employee.id} xs={8} sm={6} lg={24 / gridCols}>
-                    <LiveEmployeeCard
-                      employee={employee}
-                      totals={totals}
-                      isActive={isActive}
-                      onClick={() => handleEmployeeClick(employee.id)}
-                    />
-                  </Col>
-                );
-              })}
-            </Row>
+            <div className="tt-live-employees-scroll">
+              <Row gutter={[6, 6]} style={{ alignContent: "flex-start" }}>
+                {sessionEmployees.map((employee) => {
+                  const totals = getEmployeeTotals(employee.id, activeSession.entries);
+                  const isActive = employee.id === activeEmployeeId;
+                  return (
+                    <Col key={employee.id} xs={12} sm={8} lg={24}>
+                      <LiveEmployeeCard
+                        employee={employee}
+                        totals={totals}
+                        isActive={isActive}
+                        onClick={() => handleEmployeeClick(employee.id)}
+                      />
+                    </Col>
+                  );
+                })}
+              </Row>
+            </div>
           </Card>
         </section>
 
@@ -488,29 +525,21 @@ function LiveEmployeeCard({
       hoverable
       onClick={onClick}
       size="small"
-      className={`tt-select-card tt-surface-card ${isActive ? "tt-employee-card--active" : ""}`}
-      styles={{ body: { padding: "8px 10px" } }}
+      className={`tt-employee-roster-card tt-select-card tt-surface-card ${isActive ? "tt-employee-card--active" : ""}`}
       style={{ width: "100%" }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 4 }}>
-        <Text strong className="text-brand-400" style={{ fontSize: 13 }}>
-          {formatEmployeeId(employee.employeeNumber)}
-        </Text>
-        <Text strong style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
-          {formatWeight(total)}
-        </Text>
+      <div className="tt-employee-roster-card__body">
+        <span className="tt-employee-roster-card__id">{formatEmployeeId(employee.employeeNumber)}</span>
+        <span className="tt-employee-roster-card__name" title={employee.legalName}>
+          {employee.legalName}
+        </span>
+        {nick ? (
+          <span className="tt-employee-roster-card__nick" title={nick}>
+            ({nick})
+          </span>
+        ) : null}
+        <span className="tt-employee-roster-card__weight">{formatWeight(total)}</span>
       </div>
-      <Text
-        ellipsis
-        style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#fff", lineHeight: 1.3 }}
-      >
-        {employee.legalName}
-      </Text>
-      {nick && (
-        <Text ellipsis style={{ display: "block", fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
-          ({nick})
-        </Text>
-      )}
     </Card>
   );
 }

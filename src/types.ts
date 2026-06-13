@@ -48,6 +48,22 @@ export interface SessionEmployeeSnapshot {
   nickname?: string;
 }
 
+export interface SessionSupervisorSnapshot {
+  id: string;
+  name: string;
+}
+
+export interface SessionRoomSnapshot {
+  id: string;
+  name: string;
+}
+
+export interface SessionCadillacMeta {
+  strain?: string;
+  binNumber?: string;
+  uid?: string;
+}
+
 export interface WeightEntry {
   id: string;
   employeeId: string;
@@ -87,10 +103,17 @@ export interface Session {
   id: string;
   facilityId: string;
   facilityName: string;
+  /** @deprecated Use rooms[] — kept for export/archive compatibility */
   roomId?: string;
+  /** @deprecated Use rooms[] — comma-joined snapshot */
   roomName?: string;
+  /** @deprecated Use supervisors[] — kept for export/archive compatibility */
   supervisorId: string;
+  /** @deprecated Use supervisors[] — comma-joined snapshot */
   supervisorName: string;
+  supervisors?: SessionSupervisorSnapshot[];
+  rooms?: SessionRoomSnapshot[];
+  cadillac?: SessionCadillacMeta;
   workType?: string;
   employeeIds: string[];
   employees: SessionEmployeeSnapshot[];

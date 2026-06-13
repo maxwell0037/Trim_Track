@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session, SessionEmployeeSnapshot, TrimCategory, WeightEntry } from "../types";
+import type { Session, SessionCadillacMeta, SessionEmployeeSnapshot, SessionRoomSnapshot, SessionSupervisorSnapshot, TrimCategory, WeightEntry } from "../types";
 import { archiveSession } from "../utils/archive";
+import { joinRoomNames, joinSupervisorNames } from "../utils/sessionDisplay";
 import { generateId } from "../utils/id";
 import { getNewestEntry, undoLastEntry } from "../utils/sessionEntries";
 import { loadActiveSession, persistActiveSession } from "../utils/sessionPersist";
@@ -19,14 +20,14 @@ interface SessionContextValue {
   startSession: (params: {
     facilityId: string;
     facilityName: string;
-    roomId?: string;
-    roomName?: string;
-    supervisorId: string;
-    supervisorName: string;
+    supervisors: SessionSupervisorSnapshot[];
+    rooms?: SessionRoomSnapshot[];
+    cadillac?: SessionCadillacMeta;
     workType?: string;
     employeeIds: string[];
     employees: SessionEmployeeSnapshot[];
   }) => void;
+  updateSessionCadillac: (updates: SessionCadillacMeta) => void;
   addEntry: (employeeId: string, category: TrimCategory, weight: number) => void;
   updateEntry: (
     entryId: string,
@@ -86,17 +87,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     (params: {
       facilityId: string;
       facilityName: string;
-      roomId?: string;
-      roomName?: string;
-      supervisorId: string;
-      supervisorName: string;
+      supervisors: SessionSupervisorSnapshot[];
+      rooms?: SessionRoomSnapshot[];
+      cadillac?: SessionCadillacMeta;
       workType?: string;
       employeeIds: string[];
       employees: SessionEmployeeSnapshot[];
     }) => {
+      const rooms = params.rooms ?? [];
+      const supervisors = params.supervisors;
       const newSession: Session = {
         id: generateId(),
-        ...params,
+        facilityId: params.facilityId,
+        facilityName: params.facilityName,
+        supervisors,
+        rooms: rooms.length > 0 ? rooms : undefined,
+        supervisorId: supervisors[0]?.id ?? "",
+        supervisorName: joinSupervisorNames(supervisors),
+        roomId: rooms[0]?.id,
+        roomName: rooms.length > 0 ? joinRoomNames(rooms) : undefined,
+        cadillac: params.cadillac,
+        workType: params.workType,
+        employeeIds: params.employeeIds,
+        employees: params.employees,
         startedAt: Date.now(),
         entries: [],
       };
@@ -105,6 +118,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const updateSessionCadillac = useCallback((updates: SessionCadillacMeta) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next = {
+        ...prev,
+        cadillac: {
+          ...prev.cadillac,
+          ...updates,
+        },
+      };
+      commitSession(next);
+      return next;
+    });
+  }, []);
 
   const addEntry = useCallback(
     (employeeId: string, category: TrimCategory, weight: number) => {
@@ -231,6 +259,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       startSession,
+      updateSessionCadillac,
       addEntry,
       updateEntry,
       deleteEntry,
@@ -245,6 +274,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [
       session,
       startSession,
+      updateSessionCadillac,
       addEntry,
       updateEntry,
       deleteEntry,

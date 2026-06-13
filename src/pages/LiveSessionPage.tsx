@@ -1,16 +1,18 @@
 import {
   MinusCircleOutlined,
-  RollbackOutlined,
   SearchOutlined,
   StopOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Button, Card, Col, Empty, Input, Row, Space, Statistic, Typography } from "antd";
+import { Button, Card, Col, Empty, Input, Row, Space, Typography } from "antd";
 import type { InputRef } from "antd/es/input";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EditEntryModal } from "../components/EditEntryModal";
 import { UndoLastEntryModal } from "../components/UndoLastEntryModal";
+import { CadillacSessionFields } from "../components/CadillacSessionFields";
+import { EntryConfirmPopup } from "../components/EntryConfirmPopup";
+import { EntryHistoryPanel } from "../components/EntryHistoryPanel";
 import { EmployeeIdentity } from "../components/EmployeeIdentity";
 import { Layout } from "../components/Layout";
 import { PrototypeAddEmployeeModal } from "../components/PrototypeAddEmployeeModal";
@@ -22,8 +24,9 @@ import { CATEGORY_LABELS, getEntriesByCategory, getEmployeeTotals, getGrandTotal
 import { getRecentEntries } from "../utils/export";
 import { getNewestEntry } from "../utils/sessionEntries";
 import { getSessionEmployees } from "../utils/sessionEmployees";
-import { categoryLabel, formatTime, formatWeight, formatWeightWithLbs, parseWholeWeight } from "../utils/format";
+import { formatTime, formatWeight, formatWeightWithLbs, parseWholeWeight } from "../utils/format";
 import { employeeNickname, filterEmployees, formatEmployeeId } from "../utils/employees";
+import { isCadillacFacility } from "../utils/sessionDisplay";
 import {
   HOURLY_TRACK_PATH,
   START_SESSION_PATH,
@@ -50,6 +53,7 @@ export function LiveSessionPage() {
     removeEmployee,
     endSession,
     reloadFromStorage,
+    updateSessionCadillac,
   } = useSession();
   const { activeEmployees } = useMasterData();
 
@@ -62,6 +66,11 @@ export function LiveSessionPage() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
   const [entryFocused, setEntryFocused] = useState(false);
+  const [entryConfirm, setEntryConfirm] = useState<{
+    category: TrimCategory;
+    weight: number;
+    employeeNumber: number;
+  } | null>(null);
   const inputRef = useRef<InputRef>(null);
   const entryActionsRef = useRef<HTMLDivElement>(null);
 
@@ -171,12 +180,18 @@ export function LiveSessionPage() {
   }
 
   function handleCategoryClick(category: TrimCategory) {
-    if (!activeEmployeeId || parsedWeight === null) return;
+    if (!activeEmployeeId || parsedWeight === null || !activeEmployee) return;
 
     addEntry(activeEmployeeId, category, parsedWeight);
     setWeight("");
     setFlash(category);
     setTimeout(() => setFlash(null), 400);
+    setEntryConfirm({
+      category,
+      weight: parsedWeight,
+      employeeNumber: activeEmployee.employeeNumber,
+    });
+    setTimeout(() => setEntryConfirm(null), 1500);
     inputRef.current?.input?.focus();
   }
 
@@ -268,45 +283,33 @@ export function LiveSessionPage() {
   const currentEmployeeCard = (
     <Card
       size="small"
-      className={`tt-live-current-card ${activeEmployee ? "tt-live-current-card--active" : ""}`}
-      styles={{ body: { padding: "12px 16px" } }}
+      className={`tt-live-current-card tt-live-current-card--compact ${activeEmployee ? "tt-live-current-card--active" : ""}`}
+      styles={{ body: { padding: "8px 12px" } }}
     >
-      <p className="tt-section-label text-center">Current Employee</p>
-      {activeEmployee && (
-        <div style={{ marginTop: 4 }}>
-          <EmployeeIdentity employee={activeEmployee} size="md" align="center" />
+      {activeEmployee ? (
+        <div className="tt-live-current-compact">
+          <div className="tt-live-current-compact__identity">
+            <span className="tt-live-current-compact__id">
+              {formatEmployeeId(activeEmployee.employeeNumber)}
+            </span>
+            <span className="tt-live-current-compact__name">{activeEmployee.legalName}</span>
+          </div>
+          {activeTotals ? (
+            <div className="tt-live-current-compact__totals">
+              <span className="tt-live-current-compact__stat tt-cat-regular">
+                R {activeTotals.regular}g
+              </span>
+              <span className="tt-live-current-compact__stat tt-cat-stick">
+                S {activeTotals.stick}g
+              </span>
+              <span className="tt-live-current-compact__stat tt-cat-smalls">
+                Sm {activeTotals.smalls}g
+              </span>
+            </div>
+          ) : null}
         </div>
-      )}
-      {activeTotals && (
-        <Row gutter={8} style={{ marginTop: 12 }}>
-          <Col span={8}>
-            <Statistic
-              title="Regular"
-              value={activeTotals.regular}
-              suffix="g"
-              valueStyle={{ fontSize: 14, color: "#34d399" }}
-              className="tt-summary-stat"
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Stick"
-              value={activeTotals.stick}
-              suffix="g"
-              valueStyle={{ fontSize: 14, color: "#fbbf24" }}
-              className="tt-summary-stat"
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Smalls"
-              value={activeTotals.smalls}
-              suffix="g"
-              valueStyle={{ fontSize: 14, color: "#a78bfa" }}
-              className="tt-summary-stat"
-            />
-          </Col>
-        </Row>
+      ) : (
+        <p className="tt-section-label text-center">Select an employee</p>
       )}
     </Card>
   );
@@ -318,7 +321,7 @@ export function LiveSessionPage() {
         <Input
           ref={inputRef}
           id="weight-input"
-          className="tt-weight-input"
+          className="tt-weight-input tt-weight-input--compact"
           size="large"
           inputMode="numeric"
           placeholder="0"
@@ -330,7 +333,7 @@ export function LiveSessionPage() {
         />
       </div>
 
-      <Space direction="vertical" size={10} style={{ width: "100%", marginTop: 12 }}>
+      <Space direction="vertical" size={6} style={{ width: "100%", marginTop: 8 }}>
         <CategoryButton
           label="Regular Trim"
           variant="regular"
@@ -356,60 +359,7 @@ export function LiveSessionPage() {
     </div>
   );
 
-  const recentEntriesSection = (
-    <Card
-      className="tt-dashboard-panel"
-      title="Recent Entries"
-      size="small"
-      style={{ borderRadius: 12, height: "100%", display: "flex", flexDirection: "column" }}
-      styles={{ body: { flex: 1, minHeight: 0, overflow: "hidden", padding: 8 } }}
-      extra={
-        canUndo ? (
-          <Button
-            size="small"
-            icon={<RollbackOutlined />}
-            onClick={handleUndoClick}
-            style={{
-              borderColor: "rgba(245, 158, 11, 0.5)",
-              background: "rgba(245, 158, 11, 0.15)",
-              color: "#fcd34d",
-            }}
-          >
-            Undo
-          </Button>
-        ) : undefined
-      }
-    >
-      {recentEntries.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No entries yet" />
-      ) : (
-        <div style={{ overflowY: "auto", maxHeight: "100%" }}>
-          <Space direction="vertical" size={6} style={{ width: "100%" }}>
-            {recentEntries.map((entry) => (
-              <Card
-                key={entry.id}
-                size="small"
-                styles={{ body: { padding: "8px 12px" } }}
-                style={{ borderRadius: 8, background: "rgba(15, 20, 25, 0.6)" }}
-              >
-                <Text type="secondary" style={{ fontSize: 10 }}>
-                  {formatTime(entry.timestamp)}
-                </Text>
-                <div>
-                  <Text strong style={{ fontSize: 15 }}>
-                    {formatWeight(entry.weight)}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
-                    {categoryLabel(entry.category)}
-                  </Text>
-                </div>
-              </Card>
-            ))}
-          </Space>
-        </div>
-      )}
-    </Card>
-  );
+  const isCadillac = isCadillacFacility(activeSession.facilityName);
 
   return (
     <Layout
@@ -437,9 +387,20 @@ export function LiveSessionPage() {
         </>
       }
     >
-      <div
-        className={`tt-live-session${entryFocused ? " tt-live-session--entry-focus" : ""}`}
-      >
+      <div className="tt-live-page">
+        {isCadillac ? (
+          <div className="tt-live-cadillac-bar">
+            <CadillacSessionFields
+              compact
+              values={activeSession.cadillac ?? {}}
+              onChange={updateSessionCadillac}
+            />
+          </div>
+        ) : null}
+
+        <div
+          className={`tt-live-session${entryFocused ? " tt-live-session--entry-focus" : ""}`}
+        >
         {/* Row 1 (portrait) / Left column (landscape): employee roster */}
         <section className="tt-live-section tt-live-employees">
           <Card
@@ -487,34 +448,54 @@ export function LiveSessionPage() {
           </Card>
         </section>
 
-        {/* Rows 2–4 (portrait) / Center column (landscape) */}
+        {/* Center: current employee + weight entry */}
         <div className="tt-live-center tt-live-section">
           <section className="tt-live-current">{currentEmployeeCard}</section>
           <section className="tt-live-weight">{weightEntrySection}</section>
-          <section className="tt-live-recent">{recentEntriesSection}</section>
         </div>
 
-        {/* Row 5 (portrait) / Right column (landscape): production breakdown */}
-        <section className="tt-live-section tt-live-breakdown">
-          <Card
-            className="tt-dashboard-panel"
-            title="Production Breakdown"
-            bordered={false}
-            style={{ height: "100%", borderRadius: 0, background: "transparent" }}
-            styles={{ body: { padding: 16 } }}
-          >
-            {activeEmployee ? (
-              <LiveEmployeeBreakdown
-                employee={activeEmployee}
-                entries={activeSession.entries}
-                onEdit={setEditingEntry}
-                onDelete={deleteEntry}
-              />
-            ) : (
-              <Empty description="Select an employee to view breakdown" />
-            )}
-          </Card>
+        {/* Right: production breakdown + entry history */}
+        <section className="tt-live-section tt-live-right">
+          <div className="tt-live-breakdown">
+            <Card
+              className="tt-dashboard-panel"
+              title="Production Breakdown"
+              bordered={false}
+              style={{ height: "100%", borderRadius: 0, background: "transparent" }}
+              styles={{ body: { padding: 12, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" } }}
+            >
+              <div className="tt-live-breakdown-scroll">
+                {activeEmployee ? (
+                  <LiveEmployeeBreakdown
+                    employee={activeEmployee}
+                    entries={activeSession.entries}
+                    onEdit={setEditingEntry}
+                    onDelete={deleteEntry}
+                  />
+                ) : (
+                  <Empty description="Select an employee" />
+                )}
+              </div>
+            </Card>
+          </div>
+          <div className="tt-live-history">
+            <EntryHistoryPanel
+              entries={recentEntries}
+              employees={sessionEmployees}
+              canUndo={canUndo}
+              onUndoLatest={handleUndoClick}
+            />
+          </div>
         </section>
+        </div>
+
+        {entryConfirm ? (
+          <EntryConfirmPopup
+            category={entryConfirm.category}
+            weight={entryConfirm.weight}
+            employeeNumber={entryConfirm.employeeNumber}
+          />
+        ) : null}
       </div>
 
       {showAddEmployee && (
@@ -714,7 +695,7 @@ function CategoryButton({
       size="large"
       disabled={disabled}
       onClick={onClick}
-      className={`tt-category-btn ${CATEGORY_CLASS[variant]} ${flash ? "tt-category-btn--flash" : ""}`}
+      className={`tt-category-btn tt-category-btn--compact ${CATEGORY_CLASS[variant]} ${flash ? "tt-category-btn--flash" : ""}`}
     >
       {label}
     </Button>

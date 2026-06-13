@@ -1,5 +1,10 @@
 import type { Session } from "../types";
 import { formatTime } from "../utils/format";
+import {
+  formatRoomHeader,
+  formatSupervisorHeader,
+  isCadillacFacility,
+} from "../utils/sessionDisplay";
 
 interface SessionInfoHeaderProps {
   session: Session;
@@ -15,9 +20,9 @@ export function SessionInfoHeader({
 }: SessionInfoHeaderProps) {
   const items = [
     { label: "Facility", value: session.facilityName },
-    ...(session.roomName ? [{ label: "Room", value: session.roomName }] : []),
-    { label: "Supervisor", value: session.supervisorName },
-    { label: "Start Time", value: formatTime(session.startedAt) },
+    { label: "Rooms", value: formatRoomHeader(session) },
+    { label: "Supervisors", value: formatSupervisorHeader(session) },
+    { label: "Start", value: formatTime(session.startedAt) },
   ];
 
   if (variant === "live") {
@@ -27,9 +32,22 @@ export function SessionInfoHeader({
           <span key={item.label} className="tt-session-info-live__segment">
             {index > 0 ? <span className="tt-session-info-live__sep" aria-hidden="true">·</span> : null}
             <span className="tt-session-info-live__label">{item.label}</span>
-            <span className="tt-session-info-live__value">{item.value}</span>
+            <span className="tt-session-info-live__value" title={item.value}>
+              {item.value}
+            </span>
           </span>
         ))}
+        {isCadillacFacility(session.facilityName) && session.cadillac ? (
+          <span className="tt-session-info-live__segment tt-session-info-live__cadillac">
+            <span className="tt-session-info-live__sep" aria-hidden="true">·</span>
+            <span className="tt-session-info-live__label">Lot</span>
+            <span className="tt-session-info-live__value">
+              {[session.cadillac.strain, session.cadillac.binNumber, session.cadillac.uid]
+                .filter(Boolean)
+                .join(" · ") || "—"}
+            </span>
+          </span>
+        ) : null}
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { PlayCircleOutlined, StopOutlined, DeleteOutlined } from "@ant-design/ic
 import { Alert, Button, Col, Row, Space, Typography } from "antd";
 import type { Session } from "../types";
 import { formatTime } from "../utils/format";
+import { formatRoomHeader, formatSupervisorHeader } from "../utils/sessionDisplay";
 
 interface ActiveSessionFoundProps {
   session: Session;
@@ -43,13 +44,13 @@ export function ActiveSessionFound({
             <Col xs={12} sm={8}>
               <div className="tt-info-chip">
                 <p className="tt-info-chip__label">Room</p>
-                <p className="tt-info-chip__value truncate">{session.roomName ?? "—"}</p>
+                <p className="tt-info-chip__value truncate">{formatRoomHeader(session)}</p>
               </div>
             </Col>
             <Col xs={12} sm={8}>
               <div className="tt-info-chip">
-                <p className="tt-info-chip__label">Supervisor</p>
-                <p className="tt-info-chip__value truncate">{session.supervisorName}</p>
+                <p className="tt-info-chip__label">Supervisors</p>
+                <p className="tt-info-chip__value truncate">{formatSupervisorHeader(session)}</p>
               </div>
             </Col>
           </Row>

@@ -8,12 +8,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ActiveSessionFound } from "../components/ActiveSessionFound";
 import { AppNav } from "../components/AppNav";
+import { CadillacSessionFields } from "../components/CadillacSessionFields";
 import { DeleteSessionModal } from "../components/DeleteSessionModal";
 import { EmployeeIdentity } from "../components/EmployeeIdentity";
 import { Layout } from "../components/Layout";
 import { useMasterData } from "../context/MasterDataContext";
 import { useSession } from "../context/SessionContext";
 import { filterEmployees } from "../utils/employees";
+import { isCadillacFacility } from "../utils/sessionDisplay";
 import {
   getSessionTrackPath,
   HOURLY_TRACK_PATH,
@@ -84,12 +86,15 @@ export function StartSessionPage() {
   const { facilities, activeSupervisors, activeEmployees, rooms } = useMasterData();
 
   const [facilityId, setFacilityId] = useState("");
-  const [roomId, setRoomId] = useState("");
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
   const [workType, setWorkType] = useState("");
-  const [supervisorId, setSupervisorId] = useState("");
+  const [selectedSupervisorIds, setSelectedSupervisorIds] = useState<string[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cadillacStrain, setCadillacStrain] = useState("");
+  const [cadillacBinNumber, setCadillacBinNumber] = useState("");
+  const [cadillacUid, setCadillacUid] = useState("");
 
   const facilityRooms = useMemo(
     () =>
@@ -111,11 +116,33 @@ export function StartSessionPage() {
     }
   }, [session, navigate]);
 
+  const selectedFacility = facilities.find((facility) => facility.id === facilityId);
+  const isCadillac = selectedFacility
+    ? isCadillacFacility(selectedFacility.name, selectedFacility.code)
+    : false;
+
   const canStart =
     facilityId !== "" &&
     workType !== "" &&
-    supervisorId !== "" &&
-    selectedEmployeeIds.length > 0;
+    selectedSupervisorIds.length > 0 &&
+    selectedEmployeeIds.length > 0 &&
+    (!facilityHasRooms || selectedRoomIds.length > 0);
+
+  function toggleSupervisor(id: string) {
+    setSelectedSupervisorIds((prev) =>
+      prev.includes(id) ? prev.filter((supervisorId) => supervisorId !== id) : [...prev, id],
+    );
+  }
+
+  function toggleRoom(id: string) {
+    setSelectedRoomIds((prev) =>
+      prev.includes(id) ? prev.filter((roomId) => roomId !== id) : [...prev, id],
+    );
+  }
+
+  function selectAllRooms() {
+    setSelectedRoomIds(facilityRooms.map((room) => room.id));
+  }
 
   function toggleEmployee(id: string) {
     setSelectedEmployeeIds((prev) =>
@@ -129,10 +156,16 @@ export function StartSessionPage() {
     if (!canStart) return;
 
     const facility = facilities.find((item) => item.id === facilityId);
-    const supervisor = activeSupervisors.find((item) => item.id === supervisorId);
-    const room = roomId ? facilityRooms.find((item) => item.id === roomId) : undefined;
+    const supervisors = selectedSupervisorIds
+      .map((id) => activeSupervisors.find((supervisor) => supervisor.id === id))
+      .filter((supervisor): supervisor is NonNullable<typeof supervisor> => supervisor !== undefined)
+      .map((supervisor) => ({ id: supervisor.id, name: supervisor.name }));
+    const rooms = selectedRoomIds
+      .map((id) => facilityRooms.find((room) => room.id === id))
+      .filter((room): room is NonNullable<typeof room> => room !== undefined)
+      .map((room) => ({ id: room.id, name: room.name }));
 
-    if (!facility || !supervisor) return;
+    if (!facility || supervisors.length === 0) return;
 
     const employees = selectedEmployeeIds
       .map((id) => activeEmployees.find((employee) => employee.id === id))
@@ -147,10 +180,15 @@ export function StartSessionPage() {
     startSession({
       facilityId: facility.id,
       facilityName: facility.name,
-      roomId: room?.id,
-      roomName: room?.name,
-      supervisorId: supervisor.id,
-      supervisorName: supervisor.name,
+      supervisors,
+      rooms: rooms.length > 0 ? rooms : undefined,
+      cadillac: isCadillac
+        ? {
+            strain: cadillacStrain.trim() || undefined,
+            binNumber: cadillacBinNumber.trim() || undefined,
+            uid: cadillacUid.trim() || undefined,
+          }
+        : undefined,
       workType,
       employeeIds: employees.map((employee) => employee.id),
       employees,
@@ -212,7 +250,10 @@ export function StartSessionPage() {
                       selected={facilityId === facility.id}
                       onClick={() => {
                         setFacilityId(facility.id);
-                        setRoomId("");
+                        setSelectedRoomIds([]);
+                        setCadillacStrain("");
+                        setCadillacBinNumber("");
+                        setCadillacUid("");
                       }}
                     />
                   </Col>
@@ -221,14 +262,29 @@ export function StartSessionPage() {
             </SectionCard>
 
             {facilityId && facilityHasRooms && (
-              <SectionCard title="Room">
+              <SectionCard
+                title="Rooms"
+                extra={
+                  selectedRoomIds.length > 0 ? (
+                    <Badge
+                      count={selectedRoomIds.length}
+                      style={{ backgroundColor: "#22c55e" }}
+                      overflowCount={99}
+                    />
+                  ) : (
+                    <Button type="link" size="small" onClick={selectAllRooms}>
+                      Select all
+                    </Button>
+                  )
+                }
+              >
                 <Row gutter={[10, 10]}>
                   {facilityRooms.map((room) => (
                     <Col key={room.id} xs={24} sm={8}>
                       <SelectCard
                         label={room.name}
-                        selected={roomId === room.id}
-                        onClick={() => setRoomId(room.id)}
+                        selected={selectedRoomIds.includes(room.id)}
+                        onClick={() => toggleRoom(room.id)}
                       />
                     </Col>
                   ))}
@@ -236,19 +292,47 @@ export function StartSessionPage() {
               </SectionCard>
             )}
 
-            <SectionCard title="Supervisor">
+            <SectionCard
+              title="Supervisors"
+              extra={
+                selectedSupervisorIds.length > 0 ? (
+                  <Badge
+                    count={selectedSupervisorIds.length}
+                    style={{ backgroundColor: "#22c55e" }}
+                    overflowCount={99}
+                  />
+                ) : undefined
+              }
+            >
               <Row gutter={[10, 10]}>
                 {activeSupervisors.map((supervisor) => (
                   <Col key={supervisor.id} xs={24} sm={8}>
                     <SelectCard
                       label={supervisor.name}
-                      selected={supervisorId === supervisor.id}
-                      onClick={() => setSupervisorId(supervisor.id)}
+                      selected={selectedSupervisorIds.includes(supervisor.id)}
+                      onClick={() => toggleSupervisor(supervisor.id)}
                     />
                   </Col>
                 ))}
               </Row>
             </SectionCard>
+
+            {isCadillac && (
+              <SectionCard title="Cadillac Lot Details">
+                <CadillacSessionFields
+                  values={{
+                    strain: cadillacStrain,
+                    binNumber: cadillacBinNumber,
+                    uid: cadillacUid,
+                  }}
+                  onChange={(updates) => {
+                    if (updates.strain !== undefined) setCadillacStrain(updates.strain);
+                    if (updates.binNumber !== undefined) setCadillacBinNumber(updates.binNumber);
+                    if (updates.uid !== undefined) setCadillacUid(updates.uid);
+                  }}
+                />
+              </SectionCard>
+            )}
 
             <SectionCard title="Work Type">
               <Row gutter={[10, 10]}>
